@@ -1,0 +1,285 @@
+import requests
+from bs4 import BeautifulSoup
+URL = "https://trak.in/india-startup-funding-investment-2015/"
+r = requests.get(URL)
+print(r.content)
+
+soup = BeautifulSoup(r.content, 'html5lib') # If this line causes an error, run 'pip install html5lib' or install html5lib
+print(soup.prettify())
+
+import pandas as pd
+tab1 = soup.find('table',{'class':'tablepress tablepress-id-57'})
+table_d = tab1.find("tr",{'class':'row-1 odd'}) 
+headings = []
+for he in table_d.find_all('th'):
+    headings.append(he.text)
+    
+print(headings)
+table_data = tab1.tbody.find_all("tr")
+data = []
+for tr in table_data:
+    temp = []
+    for td in tr.find_all('td'):
+        temp.append(td.text)
+    data.append(temp)
+data = pd.DataFrame(data,columns = headings)
+data
+
+content = soup.find_all('table')
+
+final_data = []
+for c in content:
+    
+    
+    for f,d in enumerate(c.find_all('tr')):
+        if f == 0:
+            continue
+        listt = []
+        for e in d.find_all('td'):
+            
+            listt.append(e.text)
+        
+        final_data.append(listt)
+    
+
+final_data = pd.DataFrame(final_data)
+final_data.drop(final_data.columns[9], inplace=True, axis=1)
+final_data.columns = headings
+final_data
+
+final_data.to_csv('project2.csv')
+
+import pandas as pd
+final_data = pd.read_csv('project2.csv')
+final_data['Year'] = pd.DatetimeIndex(final_data['Date (dd/mm/yyyy)']).year
+final_data
+
+final_data.shape
+
+
+final_data.info()
+
+final_data.nunique()
+
+final_data.isnull().sum()
+
+final_data['Amount (In USD)'] = final_data['Amount (In USD)'].apply(lambda x: str(x).replace(',', ''))
+
+final_data['Amount (In USD)'] = final_data['Amount (In USD)'].apply(lambda x : str(x).replace("undisclosed", "0"))
+final_data['Amount (In USD)'] = final_data['Amount (In USD)'].apply(lambda x : str(x).replace("Undisclosed", "0"))
+final_data['Amount (In USD)'] = final_data['Amount (In USD)'].apply(lambda x : str(x).replace("unknown", "0"))
+final_data['Amount (In USD)'] = final_data['Amount (In USD)'].apply(lambda x : str(x).replace("nan", "0"))
+final_data['Amount (In USD)'] = final_data['Amount (In USD)'].apply(lambda x : str(x).replace("NA", "0"))
+final_data['Amount (In USD)'] = final_data['Amount (In USD)'].apply(lambda x : str(x).replace("+", ""))
+
+final_data['Amount (In USD)'] = pd.to_numeric(final_data['Amount (In USD)'])
+
+# Converting to numeric data-type
+final_data['Amount (In USD)'] = pd.to_numeric(final_data['Amount (In USD)'])
+
+print(f"The number of Unique Startups are:  {final_data['Startup Name'].nunique()} ")
+
+import matplotlib.pyplot as plt
+my_colors = ['r','g','y','b','m','c','k','lime','indigo','orangered']
+final_data['Startup Name'].value_counts()[:10].plot(kind='bar', figsize=(12,4),color = my_colors)
+plt.title('TOP 10 STARTUPS WITH MAXIMUM NUMBER OF INVESTORS')
+plt.ylabel('NO. OF INVESTORS')
+plt.savefig('my1.jpg')
+plt.show()
+
+temp_df = final_data.sort_values('Amount (In USD)', ascending=False, )
+
+temp_df = temp_df[['Startup Name', 'Amount (In USD)']][:10].set_index('Startup Name', drop=True, )
+temp_df.plot(kind='bar', figsize=(10,5),color = 'm')
+plt.savefig('my3.jpg')
+plt.show()
+
+temp_df.plot(kind='pie', subplots=True, figsize=(12,6), autopct='%.f%%')
+plt.savefig('my2.jpg')
+plt.show()
+
+temp_df.T
+
+uni = final_data["Investors' Name"].nunique()
+print("Number of unique investors are : ",uni)
+
+investor = final_data.groupby("Investors' Name")['Amount (In USD)'].sum().reset_index()
+investor.sort_values('Amount (In USD)', inplace=True, ascending=False)
+investor.reset_index()[:10]
+#Top 10 Investors in Indian ecosystem according to the total amount they invested in startups
+
+#Top 10 industries which are favourite of Investors
+final_data['Industry / Vertical'].value_counts()[:10].reset_index()
+
+#Top 10 Sub-industries in Technology industry according to number of times Investors invested in Startups.
+temp_df = final_data[final_data['Industry / Vertical'].isin(['Technology','technology'])]
+temp_df = temp_df['Sub-Vertical'].value_counts()[:10].reset_index()
+temp_df.columns = ['Sub Industry', 'Number of times']
+temp_df.set_index('Sub Industry', drop=True, inplace=True)
+temp_df.plot(kind='bar', figsize=(10,5))
+plt.savefig('my4.jpg')
+plt.show()
+temp_df.T
+
+#Top 10 Industry where funding is maximum.
+final_data['Industry / Vertical'] = final_data['Industry / Vertical'].apply(lambda x: 'ECommerce' if x=='eCommerce' else x)
+
+new_df = final_data.groupby('Industry / Vertical')['Amount (In USD)'].sum().reset_index()
+new_df.sort_values('Amount (In USD)', inplace=True, ascending=False)
+
+new_df.set_index('Industry / Vertical', inplace=True, drop=True)
+new_df[:10].plot(kind='bar', figsize=(10,5))
+plt.savefig('my5.jpg')
+plt.show()
+
+new_df[:10].plot(kind='pie', subplots=True, figsize=(12,6), autopct='%.f%%')
+plt.savefig('my6.jpg')
+plt.show()
+
+new_df[:10].T
+
+#Top 10 cities which have maximum startups
+city = final_data['City / Location'].value_counts()[:10].reset_index()
+city.columns = ['City', 'Number of Startups']
+city.set_index('City', drop=True, inplace=True)
+city.plot(kind='bar', figsize=(10,5), title='Top 10 Cities which have maximum startups ')
+plt.show()
+
+city.plot(kind='pie', subplots=True, figsize=(12,6), autopct='%.f%%')
+plt.show()
+city.T
+
+# Dealing with incorrect entries.
+def convert(x):
+    if x== 'SeedFunding':
+        return 'Seed Funding'
+    elif x== 'PrivateEquity':
+        return 'Private Equity'
+    elif x== 'Crowd funding':
+        return 'Crowd Funding'
+    else:
+        return x
+
+final_data['Investment Type'] = final_data['Investment Type'].apply(convert)
+
+final_data['Investment Type'].value_counts().plot(kind='bar', figsize=(12,6), title='Type of Investment')
+plt.savefig('my7.jpg')
+plt.show()
+
+final_data['Investment Type'].value_counts().plot(kind='pie', figsize=(12,6), subplots=True, autopct='%.f%%')
+plt.savefig('my8.jpg')
+plt.show()
+
+data_cities=final_data.dropna(how="any",axis=0,subset=['City / Location'])
+data_cities.shape
+
+data_cities_sum=pd.DataFrame(data_cities.groupby(['City / Location']).sum()["Amount (In USD)"])
+data_cities_sum['% Investements']=((data_cities_sum['Amount (In USD)']/data_cities_sum['Amount (In USD)'].sum())*100).round(2)
+data_cities_sum=data_cities_sum.reset_index().sort_values(by='% Investements',ascending=False)
+
+Top_10 = data_cities_sum[['City / Location','% Investements']][0:10]
+Top_10.loc[len(Top_10.index)] = ['Others', 100-(data_cities_sum['% Investements'][0:10]).sum()] 
+Top_10=Top_10.sort_values(by='% Investements',ascending=False)
+
+plt.figure(figsize=(6,6))
+plt.title("Distribution of Investments by City")
+colors1 = ['#191970','#001CF0','#0038E2','#0055D4','#0071C6','#008DB8','#00AAAA','#00C69C','#00E28E','#00FF80','#4EF4D1']
+colors=['#234753','#215861','#206A6B','#247D73','#318F77','#46A178','#60B276','#7EC372','#A0D36E','#C6E16A','#EFEE69']
+plt.axis("equal")
+g3=plt.pie(Top_10['% Investements'],labels=Top_10['City / Location'],colors=colors,autopct='%0.0f%%',
+           shadow=True)
+plt.savefig('my9.jpg')
+
+plt.figure(figsize = (15,15))
+from wordcloud import WordCloud, STOPWORDS
+stopwords = set(STOPWORDS)
+wordcloud = WordCloud(
+                          background_color='white',
+                          stopwords=stopwords,
+                          max_words=150,
+                          max_font_size=40, 
+                          random_state=42
+                         ).generate(str(final_data[final_data['Industry / Vertical'] == 'Technology']["Investors' Name"]))
+
+print(wordcloud)
+fig = plt.figure(1)
+plt.imshow(wordcloud)
+plt.axis('off')
+plt.savefig('my10.jpg')
+plt.show()
+#WordCloud of Technology Investers
+
+final_data.groupby('Investment Type').sum()['Amount (In USD)'].to_csv('summary.csv')
+#Total amount of funding received as per investment type
+
+
+final_data['Investment Type'].value_counts()
+
+dnewdf=final_data.set_index('Date (dd/mm/yyyy)')
+
+dnewdf.head()
+
+dnewdf.rename(columns = {'Startup Name':'Startupname'}, inplace = True)
+dnewdf.rename(columns = {'Amount (In USD)':'Amount'}, inplace = True)
+
+
+print('total number of unique startups funded in 2018 -'+str(len(dnewdf[dnewdf['Year'] == 2018].Startupname.unique())))
+print('total number of unique startups funded in 2019 -'+str(len(dnewdf[dnewdf['Year'] == 2019].Startupname.unique())))
+print('total number of unique startups funded in 2020 -'+str(len(dnewdf[dnewdf['Year'] == 2020].Startupname.unique())))
+print('total number of unique startups funded in 2021 -'+str(len(dnewdf[dnewdf['Year'] == 2021].Startupname.unique())))
+
+print('total amount for startups funding in 2018 - '+str(dnewdf[dnewdf['Year'] == 2018].Amount.sum()))
+print('total amount for startups funding in 2019 - '+str(dnewdf[dnewdf['Year'] == 2019].Amount.sum()))
+print('total amount for startups funding in 2020 - '+str(dnewdf[dnewdf['Year'] == 2020].Amount.sum()))
+print('total amount for startups funding in 2021 - '+str(dnewdf[dnewdf['Year'] == 2021].Amount.sum()))
+total = [dnewdf[dnewdf['Year'] == 2018].Amount.sum(),dnewdf[dnewdf['Year'] == 2019].Amount.sum(),dnewdf[dnewdf['Year'] == 2020].Amount.sum(),dnewdf[dnewdf['Year'] == 2021].Amount.sum()]
+year = [2018,2019,2020,2021]
+
+output = [idx for idx, element in enumerate(total)  if element == max(total)]
+output = output[0]
+output = output + 2018
+output
+print("Maximum total startup funding amount was : \n",max(total))
+print("in the year : \n",output)
+
+import matplotlib.pyplot as plt
+plt.title('Total funding amount per year')
+plt.bar(year,total,color=['green','red','blue','yellow'])
+plt.show
+#highest in is year 2019, due to covid 19 , there is significant decrease in amount in 2020 and 2021
+
+print('Average amount for startups funding in 2018 - '+str(dnewdf[dnewdf['Year'] == 2018].Amount.mean()))
+print('Average amount for startups funding in 2019 - '+str(dnewdf[dnewdf['Year'] == 2019].Amount.mean()))
+print('Average amount for startups funding in 2020 - '+str(dnewdf[dnewdf['Year'] == 2020].Amount.mean()))
+print('Average amount for startups funding in 2021 - '+str(dnewdf[dnewdf['Year'] == 2021].Amount.mean()))
+
+total2 = [dnewdf[dnewdf['Year'] == 2018].Amount.mean(),dnewdf[dnewdf['Year'] == 2019].Amount.mean(),dnewdf[dnewdf['Year'] == 2020].Amount.mean(),dnewdf[dnewdf['Year'] == 2021].Amount.mean()]
+year2 = [2018,2019,2020,2021]
+output2 = [idx for idx, element in enumerate(total2)  if element == max(total2)]
+output2 = output2[0]
+output2 = output2 + 2018
+output2
+print("Maximum average startup funding amount was : \n",max(total2))
+print("in the year : \n",output2)
+#there was a significant decline in funding amount from 2019 to 2020 , due to COVID 19 situation
+#but , due to improvement in the situation , fundings have raised again in 2021
+
+
+final_data['Date (dd/mm/yyyy)'] = pd.to_datetime(final_data['Date (dd/mm/yyyy)'])
+
+final_data['month']=final_data['Date (dd/mm/yyyy)'].dt.month
+final_data
+
+fig =plt.figure(figsize=(20,7))
+fig.set_figheight
+ts_month = final_data.groupby(['year', 'month']).agg({'Amount (In USD)':'sum'})['Amount (In USD)']
+ts_month.plot(linewidth=4, color='crimson',marker="o", markersize=10, markerfacecolor='olive')
+plt.ylabel('USD')
+plt.xlabel('Month');
+plt.title('Funding Variation Per Month from 2018-2021')
+
+
+ts_month
+
+max(ts_month)
+
