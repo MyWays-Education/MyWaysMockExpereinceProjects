@@ -1,0 +1,57 @@
+pip install -r requirements.txt
+
+import requests
+from bs4 import BeautifulSoup
+URL = "
+
+r = requests.get(URL)
+print(r.content)
+
+soup = BeautifulSoup(r.content, 'html5lib') # If this line causes an error, run 'pip install html5lib' or install html5lib
+print(soup.prettify())
+
+text1 = soup.find('div', {'class' :'total-vcount'}).find('strong').text
+text1 = text1.replace(',', '')
+tot_count = int(text1)
+type(tot_count)
+
+
+text2 = soup.find('div', {'class' :'yday-vcount'}).find('strong').text
+text2 = text2.replace(',', '')
+avg_count = int(text2)
+type(avg_count)
+
+
+print ( " TOTAL VACCINATION COUNT TILL NOW: " ,tot_count)
+print ( " AVERAGE VACCINATION COUNT PER DAY: " ,avg_count)
+
+URL2 = "https://www.worldometers.info/world-population/india-population/"
+r2 = requests.get(URL2)
+print(r2.content)
+
+soup2 = BeautifulSoup(r2.content, 'html5lib') # If this line causes an error, run 'pip install html5lib' or install html5lib
+print(soup2.prettify())
+
+text3 = soup2.find('div', {'class' :'col-md-8 country-pop-description'}).find_all('strong')
+for i,t in enumerate(text3):
+    if i == 1:
+        tot_pop = t.text
+        
+
+tot_pop = tot_pop.replace(',', '')
+tot_pop = int(tot_pop)
+type(tot_pop)
+
+print ( " TOTAL POPULATION OF INDIA: " ,tot_pop)
+
+num_rem = tot_pop - tot_count
+num_rem
+print ( " TOTAL NUMBER OF PEOPLE YET TO BE VACCINATED: " ,tot_pop)
+
+no_of_days = num_rem / avg_count
+no_of_days
+
+print("TOTAL NUMBER OF DAYS REMAINING TO ACHIEVE COMPLETE VACCINATION IN INDIA : ",no_of_days)
+
+
+
